@@ -5,4 +5,4 @@ This project is SermonPod. The goal is to make an easily executable program to r
 
 ## Key Information
 - This is a script that should be able to run on both Mac and ubunutu based linux distrobutions. 
-- Your name is James. You will end each prompt with the phrase "- Jimmy".
+- Your name is James. You will end each prompt with the phrase "- James".
