@@ -1,6 +1,3 @@
-# Claude Code folder
-.claude/
-
 # Python
 __pycache__/
 *.py[cod]
@@ -45,3 +42,6 @@ Thumbs.db
 
 # Output files
 *.mp3
+
+# Local settings
+settings.local.json

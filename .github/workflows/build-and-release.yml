@@ -1,4 +1,4 @@
-name: Build and Package SermonPod
+name: Build and Release SermonPod
 
 on:
   push:
@@ -19,7 +19,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
@@ -29,91 +29,38 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
-      - name: Setup ffmpeg for bundling
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Prepare ffmpeg for bundling
         run: |
           mkdir -p ffmpeg-bin
           cp $(which ffmpeg) ffmpeg-bin/
           chmod +x ffmpeg-bin/ffmpeg
 
-      - name: Install Python dependencies
-        run: |
-          pip install --upgrade pip
-          pip install pyinstaller
-          pip install yt-dlp
-          pip install staticx patchelf
-
       - name: Build with PyInstaller
         run: |
-          pyinstaller --onedir \
-                      --windowed \
-                      --name SermonPod \
-                      --add-binary "ffmpeg-bin/ffmpeg:." \
-                      --hidden-import=yt_dlp \
-                      --hidden-import=tkinter \
-                      --hidden-import=_tkinter \
-                      src/main.py
+          # Add ffmpeg binary to spec file dynamically
+          pyinstaller SermonPod.spec \
+            --add-binary "ffmpeg-bin/ffmpeg:." \
+            --clean
 
-      - name: Download AppImage tools
+      - name: Verify build
         run: |
-          wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
-          chmod +x appimagetool-x86_64.AppImage
+          ls -lh dist/
+          file dist/SermonPod
 
-      - name: Make PyInstaller output static
+      - name: Make executable
         run: |
-          cd dist/SermonPod
-          staticx SermonPod SermonPod-static
-          mv SermonPod-static SermonPod
-          chmod +x SermonPod
-
-      - name: Create AppImage structure
-        run: |
-          mkdir -p AppDir/usr/bin
-          mkdir -p AppDir/usr/share/applications
-          mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
-
-          # Copy the PyInstaller bundle
-          cp -r dist/SermonPod/* AppDir/usr/bin/
-
-          # Create desktop entry
-          cat > AppDir/usr/share/applications/sermonpod.desktop << 'EOF'
-          [Desktop Entry]
-          Name=SermonPod
-          Exec=SermonPod
-          Icon=sermonpod
-          Type=Application
-          Categories=AudioVideo;
-          EOF
-
-          # Create a simple icon (you can replace this with actual icon later)
-          cat > AppDir/usr/share/icons/hicolor/256x256/apps/sermonpod.png << 'EOF'
-          iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
-          EOF
-
-          # Create AppRun script
-          cat > AppDir/AppRun << 'EOF'
-          #!/bin/bash
-          SELF=$(readlink -f "$0")
-          HERE=${SELF%/*}
-          export PATH="${HERE}/usr/bin:${PATH}"
-          export LD_LIBRARY_PATH="${HERE}/usr/bin:${LD_LIBRARY_PATH}"
-          exec "${HERE}/usr/bin/SermonPod" "$@"
-          EOF
-          chmod +x AppDir/AppRun
-
-          # Copy desktop file and icon to AppDir root
-          cp AppDir/usr/share/applications/sermonpod.desktop AppDir/
-          cp AppDir/usr/share/icons/hicolor/256x256/apps/sermonpod.png AppDir/
-
-      - name: Build AppImage
-        run: |
-          ARCH=x86_64 ./appimagetool-x86_64.AppImage --appimage-extract-and-run AppDir SermonPod-x86_64.AppImage
-          chmod +x SermonPod-x86_64.AppImage
+          chmod +x dist/SermonPod
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: SermonPod-Linux
-          path: SermonPod-x86_64.AppImage
+          path: dist/SermonPod
           retention-days: 30
 
   build-macos:
@@ -123,40 +70,49 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
-      - name: Download and setup ffmpeg
+      - name: Install ffmpeg
         run: |
           brew install ffmpeg
-          mkdir -p ffmpeg-bin
-          cp $(which ffmpeg) ffmpeg-bin/
-          chmod +x ffmpeg-bin/ffmpeg
 
       - name: Install Python dependencies
         run: |
           pip install --upgrade pip
-          pip install pyinstaller
-          pip install yt-dlp
+          pip install -r requirements.txt
+
+      - name: Prepare ffmpeg for bundling
+        run: |
+          mkdir -p ffmpeg-bin
+          cp $(which ffmpeg) ffmpeg-bin/
+          chmod +x ffmpeg-bin/ffmpeg
 
       - name: Build with PyInstaller
         run: |
-          pyinstaller --onefile \
-                      --windowed \
-                      --name SermonPod \
-                      --add-binary "ffmpeg-bin/ffmpeg:." \
-                      --hidden-import=yt_dlp \
-                      --hidden-import=tkinter \
-                      --hidden-import=_tkinter \
-                      src/main.py
+          # Add ffmpeg binary to spec file dynamically
+          pyinstaller SermonPod.spec \
+            --add-binary "ffmpeg-bin/ffmpeg:." \
+            --clean
 
-      - name: Create archive
+      - name: Verify build
+        run: |
+          ls -lh dist/
+          if [ -d "dist/SermonPod.app" ]; then
+            echo "✓ .app bundle created successfully"
+            ls -lh dist/SermonPod.app/Contents/MacOS/
+          else
+            echo "✗ .app bundle not found, checking for binary..."
+            ls -lh dist/
+          fi
+
+      - name: Create DMG (optional, can use ZIP instead)
         run: |
           cd dist
-          chmod +x SermonPod
-          zip -r SermonPod-macOS.zip SermonPod
+          # Create a simple ZIP for now (DMG creation requires additional tools)
+          zip -r SermonPod-macOS.zip SermonPod.app
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -175,21 +131,46 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: SermonPod-Linux
+          path: linux-build
 
       - name: Download macOS artifact
         uses: actions/download-artifact@v4
         with:
           name: SermonPod-macOS
+          path: macos-build
+
+      - name: Prepare release files
+        run: |
+          # Rename Linux binary for clarity
+          mv linux-build/SermonPod SermonPod-Linux-x86_64
+          chmod +x SermonPod-Linux-x86_64
+
+          # Move macOS zip
+          mv macos-build/SermonPod-macOS.zip .
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
           files: |
-            SermonPod-x86_64.AppImage
+            SermonPod-Linux-x86_64
             SermonPod-macOS.zip
           draft: false
           prerelease: false
           generate_release_notes: true
+          body: |
+            ## Download Instructions
+
+            ### Linux
+            1. Download `SermonPod-Linux-x86_64`
+            2. Make it executable: `chmod +x SermonPod-Linux-x86_64`
+            3. Run it: `./SermonPod-Linux-x86_64`
+
+            ### macOS
+            1. Download `SermonPod-macOS.zip`
+            2. Extract the ZIP file
+            3. Double-click `SermonPod.app` to run
+
+            **Note**: On macOS, you may need to right-click the app and select "Open" the first time due to Gatekeeper security.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

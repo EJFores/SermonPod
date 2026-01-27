@@ -1,0 +1,19 @@
+# Core dependencies
+yt-dlp>=2024.0.0
+pyinstaller>=6.0.0
+
+# SSL/HTTPS support
+certifi
+urllib3
+
+# Audio metadata handling
+mutagen
+
+# Encryption support for restricted videos
+pycryptodomex
+
+# Compression support
+brotli
+
+# WebSocket support for yt-dlp
+websockets
