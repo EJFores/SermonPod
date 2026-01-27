@@ -10,15 +10,15 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 from typing import Optional
 
-from ..core.downloader import DownloadError, YouTubeDownloader
-from ..utils.config import ConfigManager
-from ..utils.file_utils import (
+from core.downloader import DownloadError, YouTubeDownloader
+from utils.config import ConfigManager
+from utils.file_utils import (
     FileUtilsError,
     open_file_location,
     sanitize_filename,
     validate_output_path,
 )
-from ..utils.validators import get_validation_message, is_valid_youtube_url
+from utils.validators import get_validation_message, is_valid_youtube_url
 
 
 class SermonPodGUI:

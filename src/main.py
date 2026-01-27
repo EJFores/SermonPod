@@ -4,9 +4,20 @@ SermonPod - YouTube to MP3 Converter
 Main entry point for the application.
 """
 
+import os
 import sys
 
-from .gui.main_window import SermonPodGUI, create_main_window
+# Add the src directory to sys.path to enable imports
+if getattr(sys, "frozen", False):
+    # Running as compiled executable (PyInstaller)
+    application_path = sys._MEIPASS
+else:
+    # Running as script - add src directory to path
+    application_path = os.path.dirname(os.path.abspath(__file__))
+
+sys.path.insert(0, application_path)
+
+from gui.main_window import SermonPodGUI, create_main_window
 
 
 def main():
