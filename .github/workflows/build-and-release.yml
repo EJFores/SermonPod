@@ -22,14 +22,12 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget xz-utils
+          sudo apt-get install -y ffmpeg
 
-      - name: Download and setup ffmpeg
+      - name: Setup ffmpeg for bundling
         run: |
-          wget https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz
-          tar xf ffmpeg-release-amd64-static.tar.xz
           mkdir -p ffmpeg-bin
-          mv ffmpeg-*-amd64-static/ffmpeg ffmpeg-bin/
+          cp $(which ffmpeg) ffmpeg-bin/
           chmod +x ffmpeg-bin/ffmpeg
 
       - name: Install Python dependencies
@@ -40,7 +38,7 @@ jobs:
 
       - name: Build with PyInstaller
         run: |
-          pyinstaller --onefile \
+          pyinstaller --onedir \
                       --windowed \
                       --name SermonPod \
                       --add-binary "ffmpeg-bin/ffmpeg:." \
@@ -49,17 +47,60 @@ jobs:
                       --hidden-import=_tkinter \
                       src/main.py
 
-      - name: Create archive
+      - name: Download AppImage tools
         run: |
-          cd dist
-          chmod +x SermonPod
-          tar -czf SermonPod-Linux-x86_64.tar.gz SermonPod
+          wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool-x86_64.AppImage
+
+      - name: Create AppImage structure
+        run: |
+          mkdir -p AppDir/usr/bin
+          mkdir -p AppDir/usr/share/applications
+          mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
+
+          # Copy the PyInstaller bundle
+          cp -r dist/SermonPod/* AppDir/usr/bin/
+
+          # Create desktop entry
+          cat > AppDir/usr/share/applications/sermonpod.desktop << 'EOF'
+          [Desktop Entry]
+          Name=SermonPod
+          Exec=SermonPod
+          Icon=sermonpod
+          Type=Application
+          Categories=AudioVideo;
+          EOF
+
+          # Create a simple icon (you can replace this with actual icon later)
+          cat > AppDir/usr/share/icons/hicolor/256x256/apps/sermonpod.png << 'EOF'
+          iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
+          EOF
+
+          # Create AppRun script
+          cat > AppDir/AppRun << 'EOF'
+          #!/bin/bash
+          SELF=$(readlink -f "$0")
+          HERE=${SELF%/*}
+          export PATH="${HERE}/usr/bin:${PATH}"
+          export LD_LIBRARY_PATH="${HERE}/usr/bin:${LD_LIBRARY_PATH}"
+          exec "${HERE}/usr/bin/SermonPod" "$@"
+          EOF
+          chmod +x AppDir/AppRun
+
+          # Copy desktop file and icon to AppDir root
+          cp AppDir/usr/share/applications/sermonpod.desktop AppDir/
+          cp AppDir/usr/share/icons/hicolor/256x256/apps/sermonpod.png AppDir/
+
+      - name: Build AppImage
+        run: |
+          ./appimagetool-x86_64.AppImage AppDir SermonPod-x86_64.AppImage
+          chmod +x SermonPod-x86_64.AppImage
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: SermonPod-Linux
-          path: dist/SermonPod-Linux-x86_64.tar.gz
+          path: SermonPod-x86_64.AppImage
           retention-days: 30
 
   build-macos:
@@ -114,7 +155,7 @@ jobs:
   create-release:
     needs: [build-linux, build-macos]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Download Linux artifact
@@ -131,7 +172,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            SermonPod-Linux-x86_64.tar.gz
+            SermonPod-x86_64.AppImage
             SermonPod-macOS.zip
           draft: false
           prerelease: false

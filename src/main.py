@@ -5,7 +5,6 @@ Main entry point for the application.
 """
 
 import sys
-import tkinter as tk
 
 from .gui.main_window import SermonPodGUI, create_main_window
 
@@ -17,7 +16,7 @@ def main():
         root = create_main_window()
 
         # Create application
-        app = SermonPodGUI(root)
+        SermonPodGUI(root)
 
         # Start main loop
         root.mainloop()
