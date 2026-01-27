@@ -88,7 +88,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='assets/SermonPod.png',
+    icon='assets/SermonPod.icns' if sys.platform == 'darwin' else 'assets/SermonPod.png',
 )
 
 # macOS-specific: Create .app bundle
@@ -96,7 +96,7 @@ if sys.platform == 'darwin':
     app = BUNDLE(
         exe,
         name='SermonPod.app',
-        icon='assets/SermonPod.png',
+        icon='assets/SermonPod.icns',
         bundle_identifier='com.sermonpod.app',
         info_plist={
             'NSPrincipalClass': 'NSApplication',

@@ -11,3 +11,6 @@ SermonPod is designed to streamline the workflow of converting YouTube sermon vi
 - True crossplatform support. I am looking at you windows...
 - Automatic deployment and realeases with github actions
 - Menus and Automatic Uploads.
+
+## Known Issues
+If your system does not have GLIBC 2.39 or higher the program will not start. In this case it would be better to build the program from source.
