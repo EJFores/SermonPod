@@ -42,10 +42,7 @@ jobs:
 
       - name: Build with PyInstaller
         run: |
-          # Add ffmpeg binary to spec file dynamically
-          pyinstaller SermonPod.spec \
-            --add-binary "ffmpeg-bin/ffmpeg:." \
-            --clean
+          pyinstaller SermonPod.spec --clean
 
       - name: Verify build
         run: |
@@ -92,10 +89,7 @@ jobs:
 
       - name: Build with PyInstaller
         run: |
-          # Add ffmpeg binary to spec file dynamically
-          pyinstaller SermonPod.spec \
-            --add-binary "ffmpeg-bin/ffmpeg:." \
-            --clean
+          pyinstaller SermonPod.spec --clean
 
       - name: Verify build
         run: |
