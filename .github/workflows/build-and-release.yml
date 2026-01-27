@@ -40,6 +40,7 @@ jobs:
           pip install --upgrade pip
           pip install pyinstaller
           pip install yt-dlp
+          pip install staticx patchelf
 
       - name: Build with PyInstaller
         run: |
@@ -56,6 +57,13 @@ jobs:
         run: |
           wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x appimagetool-x86_64.AppImage
+
+      - name: Make PyInstaller output static
+        run: |
+          cd dist/SermonPod
+          staticx SermonPod SermonPod-static
+          mv SermonPod-static SermonPod
+          chmod +x SermonPod
 
       - name: Create AppImage structure
         run: |
