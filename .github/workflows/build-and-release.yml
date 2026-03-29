@@ -106,17 +106,72 @@ jobs:
         run: |
           cd dist
           # Create a simple ZIP for now (DMG creation requires additional tools)
-          zip -r SermonPod-macOS.zip SermonPod.app
+          zip -r SermonPod-macOS-silicon.zip SermonPod.app
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SermonPod-macOS
-          path: dist/SermonPod-macOS.zip
+          name: SermonPod-macOS-silicon
+          path: dist/SermonPod-macOS-silicon.zip
+          retention-days: 30
+
+  build-macos-intel:
+    runs-on: macos-26-intel
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install ffmpeg
+        run: |
+          brew install ffmpeg
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Prepare ffmpeg for bundling
+        run: |
+          mkdir -p ffmpeg-bin
+          cp $(which ffmpeg) ffmpeg-bin/
+          chmod +x ffmpeg-bin/ffmpeg
+
+      - name: Build with PyInstaller
+        run: |
+          pyinstaller SermonPod.spec --clean
+
+      - name: Verify build
+        run: |
+          ls -lh dist/
+          if [ -d "dist/SermonPod.app" ]; then
+            echo "✓ .app bundle created successfully"
+            ls -lh dist/SermonPod.app/Contents/MacOS/
+          else
+            echo "✗ .app bundle not found, checking for binary..."
+            ls -lh dist/
+          fi
+
+      - name: Create DMG (optional, can use ZIP instead)
+        run: |
+          cd dist
+          # Create a simple ZIP for now (DMG creation requires additional tools)
+          zip -r SermonPod-macOS-intel.zip SermonPod.app
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SermonPod-macOS-intel
+          path: dist/SermonPod-macOS-intel.zip
           retention-days: 30
 
   create-release:
-    needs: [build-linux, build-macos]
+    needs: [build-linux, build-macos, build-macos-intel]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     permissions:
@@ -129,11 +184,17 @@ jobs:
           name: SermonPod-Linux
           path: linux-build
 
-      - name: Download macOS artifact
+      - name: Download macOS Silicon artifact
         uses: actions/download-artifact@v4
         with:
-          name: SermonPod-macOS
-          path: macos-build
+          name: SermonPod-macOS-silicon
+          path: macos-silicon-build
+
+      - name: Download macOS Intel artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: SermonPod-macOS-intel
+          path: macos-intel-build
 
       - name: Prepare release files
         run: |
@@ -141,8 +202,9 @@ jobs:
           mv linux-build/SermonPod SermonPod-Linux-x86_64
           chmod +x SermonPod-Linux-x86_64
 
-          # Move macOS zip
-          mv macos-build/SermonPod-macOS.zip .
+          # Move macOS zips
+          mv macos-silicon-build/SermonPod-macOS-silicon.zip .
+          mv macos-intel-build/SermonPod-macOS-intel.zip .
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -150,7 +212,8 @@ jobs:
           tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
           files: |
             SermonPod-Linux-x86_64
-            SermonPod-macOS.zip
+            SermonPod-macOS-silicon.zip
+            SermonPod-macOS-intel.zip
           draft: false
           prerelease: false
           generate_release_notes: true
@@ -162,8 +225,13 @@ jobs:
             2. Make it executable: `chmod +x SermonPod-Linux-x86_64`
             3. Run it: `./SermonPod-Linux-x86_64`
 
-            ### macOS
-            1. Download `SermonPod-macOS.zip`
+            ### macOS (Apple Silicon)
+            1. Download `SermonPod-macOS-silicon.zip`
+            2. Extract the ZIP file
+            3. Double-click `SermonPod.app` to run
+
+            ### macOS (Intel)
+            1. Download `SermonPod-macOS-intel.zip`
             2. Extract the ZIP file
             3. Double-click `SermonPod.app` to run
 
