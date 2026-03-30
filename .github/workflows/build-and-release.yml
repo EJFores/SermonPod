@@ -116,7 +116,7 @@ jobs:
           retention-days: 30
 
   build-macos-intel:
-    runs-on: macos-26-intel
+    runs-on: macos-15-intel
 
     steps:
       - name: Checkout code
@@ -144,7 +144,7 @@ jobs:
 
       - name: Build with PyInstaller
         run: |
-          pyinstaller SermonPod.spec --clean --target-arch x86_64
+          pyinstaller SermonPod.spec --clean
 
       - name: Verify build
         run: |
