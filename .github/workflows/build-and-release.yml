@@ -144,7 +144,7 @@ jobs:
 
       - name: Build with PyInstaller
         run: |
-          pyinstaller SermonPod.spec --clean
+          pyinstaller SermonPod.spec --clean --target-arch x86_64
 
       - name: Verify build
         run: |
@@ -152,6 +152,7 @@ jobs:
           if [ -d "dist/SermonPod.app" ]; then
             echo "✓ .app bundle created successfully"
             ls -lh dist/SermonPod.app/Contents/MacOS/
+            file dist/SermonPod.app/Contents/MacOS/SermonPod
           else
             echo "✗ .app bundle not found, checking for binary..."
             ls -lh dist/
